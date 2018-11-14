@@ -8,9 +8,3 @@ AJS.$("#dialog-submit-button").click(function (e) {
     e.preventDefault();
     AJS.dialog2("#demo-dialog").hide();
 });
-
-
-if (window.location.href.indexOf("servicedesk/customer/user/forgotpassword") > -1) {
-    document.getElementsByClassName('field-label')[0].textContent = 'Ваш Email';
-    document.getElementsByClassName('js-submit-button')[0].value = 'Отправить';
-}
