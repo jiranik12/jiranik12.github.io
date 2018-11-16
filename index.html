@@ -8,3 +8,129 @@ AJS.$("#dialog-submit-button").click(function (e) {
     e.preventDefault();
     AJS.dialog2("#demo-dialog").hide();
 });
+
+(function() {
+    var counter = 1;
+    function newId(seed) {
+        return String(seed || '') + counter++;
+    }
+
+    var savedVersions = [{
+        id: 10000,
+        status: 'Released',
+        name: 'v1.0',
+        description: 'The first release'
+    }, {
+        id: 10001,
+        status: 'Unreleased',
+        name: 'v1.1',
+        description: 'An improvement on the first release'
+    }];
+
+    function getVersion(id) {
+        return savedVersions.find(v => v.id == id);
+    }
+
+    var server = sinon.fakeServer.create();
+    server.respondWith("GET", /rest\/project\/(\w+)\/versions/, function(xhr, projectId) {
+        xhr.respond(200, {"Content-Type": "application/json"}, JSON.stringify(savedVersions));
+    });
+
+    server.respondWith("GET", /rest\/version\/(\d+)/, function(xhr, id) {
+        let version = getVersion(id);
+        if (version) {
+            xhr.respond(200, {"Content-Type": "application/json"}, JSON.stringify(version));
+        } else {
+            xhr.respond(404, {"Content-Type": "application/json"}, '{"errors":["Not found"]}');
+        }
+    });
+
+    server.respondWith("PUT", /rest\/version\/(\d+)/, function(xhr, id) {
+        let version = getVersion(id);
+        if (version) {
+            let newData = JSON.parse(xhr.requestBody);
+            AJS.$.extend(version, newData);
+            xhr.respond(200, {"Content-Type": "application/json"}, JSON.stringify(version));
+        } else {
+            xhr.respond(404, {"Content-Type": "application/json"}, '{"errors":["Not found"]}');
+        }
+    });
+
+    server.respondWith("DELETE", /rest\/version\/(\d+)/, function(xhr, id) {
+        let version = getVersion(id);
+        if (version) {
+            savedVersions = savedVersions.filter(v => v.id !== id);
+            xhr.respond(200, {"Content-Type": "application/json"}, JSON.stringify(version));
+        } else {
+            xhr.respond(404, {"Content-Type": "application/json"}, '{"errors":["Not found"]}');
+        }
+    });
+
+    server.respondWith("POST", /rest\/version$/, function(xhr) {
+        var newVersion = JSON.parse(xhr.requestBody);
+        newVersion.id = newId('1100');
+        savedVersions.push(newVersion);
+        xhr.respond(200, {"Content-Type": "application/json"}, JSON.stringify(newVersion));
+    });
+
+    server.autoRespond = true;
+    server.autoRespondAfter = 300;
+})();
+
+
+new AJS.RestfulTable({
+    el: jQuery("#project-config-versions-table"),
+    autoFocus: true,
+    resources: {
+        all: "rest/project/HSP/versions?expand=operations",
+        self: "rest/version"
+    },
+    deleteConfirmationCallback: function(model) {
+        AJS.$("#restful-table-model")[0].innerHTML = "<b>ID:</b> " + model.id + " <b>status:</b> " + model.status + " <b>description:</b> " + model.description;
+        AJS.dialog2("#delete-confirmation-dialog").show();
+        return new Promise(function(resolve, reject) {
+            AJS.$("#dialog-submit-button").click(function (e) {
+                resolve();
+                e.preventDefault();
+                AJS.dialog2("#delete-confirmation-dialog").hide();
+            });
+            AJS.$(".aui-dialog2-header-close, #warning-dialog-cancel").click(function (e) {
+                reject();
+                e.preventDefault();
+                AJS.dialog2("#delete-confirmation-dialog").hide();
+            });
+        });
+    },
+    columns: [
+        {
+            id: "status",
+            header: ""
+        },
+        {
+            id: "name",
+            header: "Version name"
+        },
+        {
+            id: "description",
+            header: "Description"
+        },
+        {
+            id: "releaseDate",
+            header: "Release date"
+        }
+    ]
+});
+
+
+(function() {
+    var restfulTableEvents = ["ROW_ADDED", "ROW_REMOVED", "EDIT_ROW", "REORDER_SUCCESS", "SERVER_ERROR"];
+    restfulTableEvents.forEach(function(eventName) {
+        jQuery(document).on(AJS.RestfulTable.Events[eventName], function() {
+            console && console.log("RestfulTable event", eventName, "- callback arguments: ", arguments);
+            AJS.flag({
+                body: "<strong>" + eventName + "</strong> fired on RestfulTable. (Check devtools for more info).",
+                close: "auto"
+            });
+        });
+    });
+})();
