@@ -18,7 +18,6 @@ AJS.$("#dialog-submit-button").click(function (e) {
 
     var savedVersions = [{
         id: 10000,
-        status: 'Released',
         name: 'Admin',
         telNumber: 'Admin',
         startDateWatch: 'Admin',
@@ -26,7 +25,6 @@ AJS.$("#dialog-submit-button").click(function (e) {
         attendant: 'false'
     }, {
         id: 10001,
-        status: 'Unreleased',
         name: 'user',
         telNumber: 'user',
         startDateWatch: 'user',
@@ -113,10 +111,6 @@ new AJS.RestfulTable({
         });
     },
     columns: [
-        {
-            id: "status",
-            header: ""
-        },
         {
             id: "name",
             header: "Name"
